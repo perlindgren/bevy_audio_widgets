@@ -16,7 +16,7 @@ For the examples we depend on various crates within the Rust ecosystem.
 
 MIT License
 
-Copyright (c) 2026 perlindgren
+Copyright (c) 2026 Per Lindgren
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
