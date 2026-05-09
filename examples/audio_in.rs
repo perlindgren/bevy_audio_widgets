@@ -1,15 +1,13 @@
-//! Records a WAV file (roughly 3 seconds long) using the default input device and config.
-//!
-//! The input data is recorded to "$CARGO_MANIFEST_DIR/recorded.wav".
+//! Example of audio input with user-configurable options.
+//! The raw sample data is printed to the console.
 
 mod common;
-use common::audio_in;
+// use common::audio_in;
 
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{/* FromSample, */ Sample};
+use cpal::traits::StreamTrait;
+// use cpal::{FromSample, Sample};
 
-use crate::common::audio_in::parse_input;
-// use std::sync::{Arc, Mutex};
+use common::audio_in::parse_input;
 
 fn main() -> Result<(), anyhow::Error> {
     let (opt, stream) = parse_input(write_input_data)?;
@@ -23,18 +21,9 @@ fn main() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-fn write_input_data<T: cpal::Sample>(input: &[T]) {
-    //     println!("Received input data: {:?}", input.len());
-    //     for sample in input.iter() {
-    //         let sample: i16 = cpal::Sample::to_i16(sample);
-    //         //     //     writer.write_sample(sample).ok();
-    //     }
+fn write_input_data(input: &[f32]) {
+    println!("Received input data: {:?}", input.len());
+    for sample in input.iter() {
+        println!("Sample: {}", sample);
+    }
 }
-
-// fn write_input_data(input: &[i16]) {
-//     println!("Received input data: {:?}", input.len());
-//     for sample in input.iter() {
-//         let sample: i16 = *sample;
-//         //     //     writer.write_sample(sample).ok();
-//     }
-// }

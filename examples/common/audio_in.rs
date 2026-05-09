@@ -1,10 +1,10 @@
-//! Records a WAV file (roughly 3 seconds long) using the default input device and config.
-//!
-//! The input data is recorded to "$CARGO_MANIFEST_DIR/recorded.wav".
+//! Audio input helper function.
 
 use clap::Parser;
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{/* FromSample, */ Sample};
+// use cpal::SampleFormat;
+use cpal::StreamConfig;
+use cpal::traits::{DeviceTrait, HostTrait /* StreamTrait */};
+// use cpal::{FromSample, Sample};
 // use std::sync::{Arc, Mutex};
 
 #[derive(Parser, Debug)]
@@ -18,6 +18,18 @@ pub struct Opt {
     #[arg(long, default_value_t = 1)]
     pub duration: u64,
 
+    /// Channels
+    #[arg(long, default_value_t = 1)]
+    pub channels: u16,
+
+    /// Sample rate
+    #[arg(long, default_value_t = 48000)]
+    pub sample_rate: u32,
+
+    /// Buffer size in frames
+    #[arg(long, default_value_t = 1024)]
+    pub buffer_size: u32,
+
     /// Use the JACK host
     #[cfg(any(
         target_os = "linux",
@@ -30,13 +42,10 @@ pub struct Opt {
     pub jack: bool,
 }
 
-
-
 #[allow(unused)]
-pub fn parse_input<T, B>(write_input_data: impl Fn(&dyn [T])) -> Result<(Opt, cpal::Stream), anyhow::Error>
-where
-    T: cpal::SizedSample,
-{
+pub fn parse_input(
+    mut write_input_data: impl Fn(&[f32]) + Send + 'static,
+) -> Result<(Opt, cpal::Stream), anyhow::Error> {
     let opt = Opt::parse();
 
     // Conditionally compile with jack if the feature is specified.
@@ -79,41 +88,31 @@ where
 
     println!("Input device: {}", device.id()?);
 
-    let config = if device.supports_input() {
-        device.default_input_config()
-    } else {
-        device.default_output_config()
-    }
-    .expect("Failed to get default input/output config");
-    println!("Default input/output config: {config:?}");
+    // Create a config according to user options with defaults:
+    // - channels: 1
+    // - sample_rate: 48_000
+    // - buffer_size: 1024
+    let config = StreamConfig {
+        channels: opt.channels,
+        sample_rate: opt.sample_rate,
+        buffer_size: cpal::BufferSize::Fixed(opt.buffer_size),
+    };
 
     let err_fn = move |err| {
         eprintln!("an error occurred on stream: {err}");
     };
 
-    let stream = match config.sample_format() {
-        cpal::SampleFormat::I8
-        | cpal::SampleFormat::I16
-        | cpal::SampleFormat::I24
-        | cpal::SampleFormat::F32 => device.build_input_stream(
+    let stream = device
+        .build_input_stream(
             &config.into(),
-            move |data, _| write_input_data::<f32>(data),
+            move |data: &[f32], info| {
+                // println!("info: {:?}", info);
+                write_input_data(data)
+            },
             err_fn,
             None,
-        )?,
-        sample_format => {
-            return Err(anyhow::Error::msg(format!(
-                "Unsupported sample format '{sample_format}'"
-            )));
-        }
-    };
-
-    // let stream = device.build_input_stream(
-    //     &config.into(),
-    //     move |data, _| write_input_data(data),
-    //     err_fn,
-    //     None,
-    // )?;
+        )
+        .expect("Failed to build input stream");
 
     println!("Input stream created");
     Ok((opt, stream))
