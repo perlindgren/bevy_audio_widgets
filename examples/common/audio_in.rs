@@ -88,6 +88,8 @@ pub fn parse_input(
 
     println!("Input device: {}", device.id()?);
 
+    let supported_configs = device.supported_input_configs()?;
+
     // Create a config according to user options with defaults:
     // - channels: 1
     // - sample_rate: 48_000
@@ -98,13 +100,35 @@ pub fn parse_input(
         buffer_size: cpal::BufferSize::Fixed(opt.buffer_size),
     };
 
+    println!("Input device config: {:?}", config);
+
     let err_fn = move |err| {
         eprintln!("an error occurred on stream: {err}");
     };
 
+    let supported_txt = supported_configs
+        .map(|config| {
+            let sample_format = config.sample_format();
+            let channels = config.channels();
+            let min_sample_rate = config.min_sample_rate();
+            let max_sample_rate = config.max_sample_rate();
+            let buffer_size = config.buffer_size();
+            format!(
+                "Sample Format: {:?}, Channels: {}, Sample Rate: {}-{} Hz, Buffer Size: {:?}",
+                sample_format, channels, min_sample_rate, max_sample_rate, buffer_size
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let support_err = format!(
+        "Failed to build input stream\nSupported configs:\n{}\nRequested config: {:?}\n",
+        supported_txt, config
+    );
+
     let stream = device
         .build_input_stream(
-            &config.into(),
+            &config,
             move |data: &[f32], info| {
                 // println!("info: {:?}", info);
                 write_input_data(data)
@@ -112,7 +136,7 @@ pub fn parse_input(
             err_fn,
             None,
         )
-        .expect("Failed to build input stream");
+        .expect(&support_err);
 
     println!("Input stream created");
     Ok((opt, stream))
