@@ -4,12 +4,27 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { git = "https://github.com/bevyengine/bevy.git" }
+# bevy = { git = "https://github.com/bevyengine/bevy.git", features = [
+#     "dev-tools",
+#     "dynamic",
+# ] }
 ringbuf = "0.5.0"
 # bevy = "0.18.1"
-
+bevy = { git = "https://github.com/bevyengine/bevy.git", features = [
+    "dynamic_linking",
+    "bevy_dev_tools",
+] }
 
 [dev-dependencies]
 anyhow = "1.0.102"
 cpal = { version = "0.17.3", features = ["jack"] }
 clap = { version = "4.6.1", features = ["derive"] }
+
+
+# Enable max optimizations for dependencies, but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
+
+# Enable only a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
