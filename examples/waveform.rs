@@ -37,25 +37,12 @@ impl<const N: usize> WaveBuffer<N> {
     }
 }
 
-impl<const N: usize> Curve<Vec2> for WaveBuffer<N> {
-    // Required methods
-    fn domain(&self) -> Interval {
-        Interval::EVERYWHERE
-    }
-
-    fn sample_unchecked(&self, t: f32) -> Vec2 {
-        let index = t as usize;
-        let y = self.samples[index] * 200.0;
-        println!("Sampling at t={:.2}: index={}, y={:.2}", t, index, y);
-        Vec2::new(t, y)
-    }
-}
-
+const SAMPLE_SIZE: usize = 1000;
 #[derive(Resource)]
 struct WaveForm<const N: usize>(Arc<Mutex<WaveBuffer<N>>>);
 
 fn main() -> Result<(), anyhow::Error> {
-    let wave_buffer = Arc::new(Mutex::new(WaveBuffer::<48000>::new()));
+    let wave_buffer = Arc::new(Mutex::new(WaveBuffer::<SAMPLE_SIZE>::new()));
 
     let wave_buffer_clone = wave_buffer.clone();
     let write_input_data = {
@@ -78,9 +65,9 @@ fn main() -> Result<(), anyhow::Error> {
                 config: FpsOverlayConfig::default(),
             },
         ))
-        .insert_resource(WaveForm::<48000>(wave_buffer))
+        .insert_resource(WaveForm::<SAMPLE_SIZE>(wave_buffer))
         .add_systems(Startup, setup)
-        .add_systems(Update, (draw_waveform::<48000>,))
+        .add_systems(Update, (draw_waveform::<SAMPLE_SIZE>,))
         .run();
     Ok(())
 }
