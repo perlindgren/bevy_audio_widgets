@@ -1,1 +1,1 @@
-// Library functionality
+pub mod wave_buffer;
