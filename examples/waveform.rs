@@ -3,6 +3,7 @@ use bevy::{
     dev_tools::fps_overlay::{FpsOverlayConfig, FpsOverlayPlugin},
     // math::Isometry2d,
     prelude::*,
+    render::render_resource::encase::private::Reader,
 };
 use cpal::traits::StreamTrait;
 // use std::f32::consts::{FRAC_PI_2, PI, TAU};
@@ -10,51 +11,23 @@ mod common;
 use common::audio_in::parse_input;
 use std::sync::{Arc, Mutex};
 
-struct WaveBuffer {
-    len: usize,
-    samples: Vec<f32>,
-    index: usize,
-}
+use bevy_audio_widgets::wave_buffer::*;
 
-impl WaveBuffer {
-    fn new(len: usize) -> Self {
-        Self {
-            len,
-            samples: vec![0.0; len],
-            index: 0,
-        }
-    }
-
-    #[inline(always)]
-    // Wraps around when the buffer is full.
-    fn add_samples(&mut self, input: &[f32]) {
-        for &sample in input.iter() {
-            // if self.index == 0 {
-            //     println!(".");
-            // }
-            self.samples[self.index] = sample;
-            //  println!("sample: {:.2} at index {}", sample, self.index);
-            self.index = (self.index + 1) % self.samples.len();
-        }
-    }
-}
+const SAMPLE_SIZE: usize = 48000;
 
 #[derive(Resource)]
-struct WaveForm(Arc<Mutex<WaveBuffer>>);
+struct WaveForm(WaveReader<'static, SAMPLE_SIZE>);
 
 fn main() -> Result<(), anyhow::Error> {
-    let SAMPLE_SIZE: usize = (2.0 * 48000.0 / 110.0) as usize;
+    let mut wave_buffer = WaveBuffer::<SAMPLE_SIZE>::new();
 
-    let wave_buffer = Arc::new(Mutex::new(WaveBuffer::new(SAMPLE_SIZE)));
-
-    let wave_buffer_clone = wave_buffer.clone();
+    let (mut writer, reader) = wave_buffer.split();
 
     // Callback closure for audio input stream. It will be called whenever new audio data is available.
-    let write_input_data = {
+    let mut write_input_data = {
         move |input: &[f32]| {
             // println!("Received input data: {:?}", input.len());
-            let mut wb = wave_buffer_clone.lock().unwrap();
-            wb.add_samples(input);
+            writer.add_samples(input);
         }
     };
 
@@ -74,7 +47,7 @@ fn main() -> Result<(), anyhow::Error> {
                 config: FpsOverlayConfig::default(),
             },
         ))
-        .insert_resource(WaveForm(wave_buffer))
+        .insert_resource(WaveForm(reader))
         .add_systems(Startup, setup)
         .add_systems(Update, (draw_waveform,))
         .run();

@@ -44,7 +44,7 @@ pub struct Opt {
 
 #[allow(unused)]
 pub fn parse_input(
-    mut write_input_data: impl Fn(&[f32]) + Send + 'static,
+    mut write_input_data: impl FnMut(&[f32]) + Send + 'static,
 ) -> Result<(Opt, cpal::Stream), anyhow::Error> {
     let opt = Opt::parse();
 

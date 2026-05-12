@@ -1,40 +1,41 @@
 use std::iter::Iterator;
 
 #[derive(Debug)]
-pub struct WaveBuffer {
-    samples: Vec<f32>, // this will be a fixed size buffer
+pub struct WaveBuffer<const N: usize> {
+    samples: [f32; N], // this will be a fixed size buffer
     in_index: usize,
 }
 
-impl WaveBuffer {
-    pub fn new(len: usize) -> Self {
+impl<const N: usize> WaveBuffer<N> {
+    #[allow(clippy::new_without_default)]
+    pub const fn new() -> Self {
         Self {
-            samples: vec![0.0; len],
+            samples: [0.0; N], // initialize with zeros, fixed size
             in_index: 0,
         }
     }
 
-    fn as_wave_writer(&mut self) -> WaveWriter<'_> {
+    const fn as_wave_writer(&mut self) -> WaveWriter<'_, N> {
         WaveWriter { buffer: self }
     }
 
-    fn as_wave_reader(&self) -> WaveReader<'_> {
+    const fn as_wave_reader(&self) -> WaveReader<'_, N> {
         WaveReader { buffer: self }
     }
 
-    pub fn split(&mut self) -> (WaveWriter<'_>, WaveReader<'_>) {
-        let my_self: *mut WaveBuffer = self;
+    pub const fn split(&mut self) -> (WaveWriter<'_, N>, WaveReader<'_, N>) {
+        let my_self: *mut WaveBuffer<N> = self;
         let ww = unsafe { &mut *my_self }.as_wave_writer();
         let wr = unsafe { &*my_self }.as_wave_reader();
         (ww, wr)
     }
 }
 
-pub struct WaveWriter<'a> {
-    buffer: &'a mut WaveBuffer,
+pub struct WaveWriter<'a, const N: usize> {
+    buffer: &'a mut WaveBuffer<N>,
 }
 
-impl<'a> WaveWriter<'a> {
+impl<'a, const N: usize> WaveWriter<'a, N> {
     #[inline(always)]
     // Wraps around when the buffer is full.
     pub fn add_samples(&mut self, input: &[f32]) {
@@ -49,14 +50,14 @@ impl<'a> WaveWriter<'a> {
     }
 }
 
-pub struct WaveReader<'a> {
-    buffer: &'a WaveBuffer,
+pub struct WaveReader<'a, const N: usize> {
+    buffer: &'a WaveBuffer<N>,
 }
 
-impl<'a> WaveReader<'a> {
+impl<'a, const N: usize> WaveReader<'a, N> {
     #[inline(always)]
     // Wraps around when the buffer is full.
-    pub fn to_iterator(&'a self, nr_elements: usize) -> WaveReaderIter<'a> {
+    pub fn to_iterator(&'a self, nr_elements: usize) -> WaveReaderIter<'a, N> {
         WaveReaderIter {
             reader: self,
             index: self.buffer.in_index, // start reading from the current write index
@@ -65,13 +66,13 @@ impl<'a> WaveReader<'a> {
     }
 }
 
-pub struct WaveReaderIter<'a> {
-    reader: &'a WaveReader<'a>,
+pub struct WaveReaderIter<'a, const N: usize> {
+    reader: &'a WaveReader<'a, N>,
     index: usize,
     nr_elements: usize,
 }
 
-impl<'a> Iterator for WaveReaderIter<'a> {
+impl<'a, const N: usize> Iterator for WaveReaderIter<'a, N> {
     type Item = f32;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -94,7 +95,7 @@ mod tests {
 
     #[test]
     fn test_wave_buffer() {
-        let mut buffer = WaveBuffer::new(5);
+        let mut buffer = WaveBuffer::<5>::new();
         let (mut writer, reader) = buffer.split();
 
         writer.add_samples(&[1.0, 2.0, 3.0]); // last added to far right
