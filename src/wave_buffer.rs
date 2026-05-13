@@ -20,7 +20,10 @@ impl<const N: usize> WaveBuffer<N> {
     }
 
     const fn as_wave_reader(&self) -> WaveReader<'_, N> {
-        WaveReader { buffer: self }
+        WaveReader {
+            buffer: self,
+            index: 0,
+        }
     }
 
     pub const fn split(&mut self) -> (WaveWriter<'_, N>, WaveReader<'_, N>) {
@@ -52,6 +55,7 @@ impl<'a, const N: usize> WaveWriter<'a, N> {
 
 pub struct WaveReader<'a, const N: usize> {
     buffer: &'a WaveBuffer<N>,
+    index: usize,
 }
 
 impl<'a, const N: usize> WaveReader<'a, N> {
@@ -60,7 +64,8 @@ impl<'a, const N: usize> WaveReader<'a, N> {
     pub fn to_iterator(&'a self, nr_elements: usize) -> WaveReaderIter<'a, N> {
         WaveReaderIter {
             reader: self,
-            index: self.buffer.in_index, // start reading from the current write index
+            // index: (self.index) % self.buffer.samples.len(), // start reading from the specified position
+            index: self.buffer.in_index, // start reading from the most recently written sample
             nr_elements,
         }
     }
