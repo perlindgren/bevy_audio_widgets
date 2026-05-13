@@ -33,19 +33,60 @@ impl WaveBuffer {
             //     println!(".");
             // }
             self.samples[self.index] = sample;
-            //  println!("sample: {:.2} at index {}", sample, self.index);
             self.index = (self.index + 1) % self.samples.len();
+            //  println!("sample: {:.2} at index {}", sample, self.index);
         }
+    }
+
+    //
+    fn to_iterator(&self, freq: f32) -> WaveBufferIter<'_> {
+        let len = self.samples.len();
+        let frame_size = len as f32 / freq;
+        let floor = ((len + self.index) as f32 / frame_size).floor();
+        let index = (floor * frame_size) as usize % len;
+        // println!(
+        //     "self.index {}, index: {}, frame_size: {}, floor: {}",
+        //     self.index, index, frame_size, floor
+        // );
+
+        WaveBufferIter {
+            buffer: self,
+            index,
+            nr_items: frame_size as usize,
+        }
+    }
+}
+
+struct WaveBufferIter<'a> {
+    buffer: &'a WaveBuffer,
+    index: usize,
+    nr_items: usize,
+}
+
+impl std::iter::Iterator for WaveBufferIter<'_> {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.nr_items == 0 {
+            return None;
+        }
+        let len = self.buffer.samples.len();
+        self.index = (len + self.index - 1) % len; // index points no next, so decrement first 
+        let sample = self.buffer.samples[self.index];
+        self.nr_items -= 1;
+        Some(sample)
     }
 }
 
 #[derive(Resource)]
 struct WaveForm(Arc<Mutex<WaveBuffer>>);
 
-fn main() -> Result<(), anyhow::Error> {
-    let SAMPLE_SIZE: usize = (2.0 * 48000.0 / 110.0) as usize;
+const SAMPLE_SIZE: usize = 48000;
 
-    let wave_buffer = Arc::new(Mutex::new(WaveBuffer::new(SAMPLE_SIZE)));
+fn main() -> Result<(), anyhow::Error> {
+    let buf_size = SAMPLE_SIZE;
+
+    let wave_buffer = Arc::new(Mutex::new(WaveBuffer::new(buf_size)));
 
     let wave_buffer_clone = wave_buffer.clone();
 
@@ -85,20 +126,46 @@ fn setup(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
 
-fn draw_waveform(
-    mut gizmos: Gizmos,
-    // _time: Res<Time>,
-    wave_buffer: Res<WaveForm>,
-) {
+fn draw_waveform(mut gizmos: Gizmos, wave_buffer: Res<WaveForm>) {
     let wave_buffer = &*wave_buffer.0.lock().unwrap();
 
-    gizmos.linestrip_2d(
-        (0..wave_buffer.len).map(|n| {
-            let t = n as f32 / wave_buffer.samples.len() as f32;
+    // gizmos.linestrip_2d(
+    //     (0..wave_buffer.len).map(|n| {
+    //         let t = n as f32 / wave_buffer.samples.len() as f32;
+    //         let x = (t - 0.5) * 600.0;
+    //         let y = wave_buffer.samples[n] * 400.0;
+    //         Vec2::new(x, y)
+    //     }),
+    //     WHITE,
+    // );
+
+    let len = wave_buffer.samples.len();
+
+    let freq = 110.0; // A2
+
+    let it = wave_buffer
+        .to_iterator(freq)
+        .enumerate()
+        .map(|(n, sample)| {
+            let t = n as f32 / (len as f32 / freq);
             let x = (t - 0.5) * 600.0;
-            let y = wave_buffer.samples[n] * 200.0;
+            let y = sample * 400.0;
             Vec2::new(x, y)
-        }),
-        WHITE,
-    );
+        });
+
+    gizmos.linestrip_2d(it, GREEN);
+
+    let freq = 146.83; // E2
+
+    let it = wave_buffer
+        .to_iterator(freq)
+        .enumerate()
+        .map(|(n, sample)| {
+            let t = n as f32 / (len as f32 / freq);
+            let x = (t - 0.5) * 600.0;
+            let y = sample * 400.0 + 200.0;
+            Vec2::new(x, y)
+        });
+
+    gizmos.linestrip_2d(it, LIGHT_YELLOW);
 }
