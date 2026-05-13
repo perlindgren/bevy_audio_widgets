@@ -33,6 +33,9 @@ impl WaveBuffer {
             //     println!(".");
             // }
             self.samples[self.index] = sample;
+            if self.index + 1 == self.samples.len() {
+                println!("Buffer full, wrapping around...");
+            }
             self.index = (self.index + 1) % self.samples.len();
             //  println!("sample: {:.2} at index {}", sample, self.index);
         }
