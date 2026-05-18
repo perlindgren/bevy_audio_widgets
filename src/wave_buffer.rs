@@ -1,13 +1,11 @@
-use std::iter;
-
-struct WaveBuffer {
-    rate: f32,         // sample rate
-    samples: Vec<f32>, // buffer size
-    index: usize,      // next index to write in buffer
+pub struct WaveBuffer {
+    pub rate: f32,         // sample rate
+    pub samples: Vec<f32>, // buffer size
+    pub index: usize,      // next index to write in buffer
 }
 
 impl WaveBuffer {
-    fn new(rate: f32, len: usize) -> Self {
+    pub fn new(rate: f32, len: usize) -> Self {
         Self {
             rate,
             samples: vec![0.0; len],
@@ -17,24 +15,26 @@ impl WaveBuffer {
 
     #[inline(always)]
     // Wraps around when the buffer is full.
-    fn add_samples(&mut self, input: &[f32]) {
+    pub fn add_samples(&mut self, input: &[f32]) {
+        let mut index = self.index % self.samples.len(); // essentially 
         for &sample in input.iter() {
             // if self.index == 0 {
             //     println!(".");
             // }
-            self.samples[self.index] = sample;
-            self.index = (self.index + 1) % self.samples.len();
+            self.samples[index] = sample;
+            index = (index + 1) % self.samples.len();
+
             if self.index == 0 {
                 println!("Buffer full, wrapping around...");
             }
 
             //  println!("sample: {:.2} at index {}", sample, self.index);
         }
+        self.index += input.len();
     }
 
     //
-    fn to_iterator(&self, freq: f32) -> impl Iterator<Item = f32> + '_ {
-        let len = self.samples.len();
+    pub fn to_iterator(&self, freq: f32) -> impl Iterator<Item = f32> + '_ {
         let frame_size = self.rate / freq;
         let index = self.index;
         let offset = (self.index as f32 % frame_size) as usize;
@@ -93,7 +93,7 @@ mod tests {
             buffer.add_samples(&[i as f32]);
         }
         println!("Buffer index: {:?}", buffer.index);
-        assert!(buffer.index == 5);
+        assert!(buffer.index == 25);
 
         let iter = buffer.to_iterator(1.0);
         for s in iter {
@@ -104,7 +104,7 @@ mod tests {
         for i in 25..30 {
             buffer.add_samples(&[i as f32]);
         }
-        assert!(buffer.index == 10);
+        assert!(buffer.index == 30);
 
         let iter = buffer.to_iterator(1.0);
         for s in iter {
@@ -115,7 +115,7 @@ mod tests {
         for i in 30..35 {
             buffer.add_samples(&[i as f32]);
         }
-        assert!(buffer.index == 15);
+        assert!(buffer.index == 35);
         let iter = buffer.to_iterator(1.0);
         for s in iter {
             println!("Sample: {}", s);

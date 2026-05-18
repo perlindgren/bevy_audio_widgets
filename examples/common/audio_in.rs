@@ -25,7 +25,7 @@ pub struct Opt {
     #[arg(long, default_value_t = 48000)]
     pub sample_rate: u32,
 
-    /// Buffer size in frames
+    /// Audio input buffer size in frames
     #[arg(long, default_value_t = 1024)]
     pub buffer_size: u32,
 
@@ -46,11 +46,10 @@ pub struct Opt {
 }
 
 #[allow(unused)]
-pub fn parse_input(
+pub fn open_input_stream(
+    opt: &Opt,
     mut write_input_data: impl Fn(&[f32]) + Send + 'static,
-) -> Result<(Opt, cpal::Stream), anyhow::Error> {
-    let opt = Opt::parse();
-
+) -> Result<(cpal::Stream), anyhow::Error> {
     // Conditionally compile with jack if the feature is specified.
     #[cfg(any(
         target_os = "linux",
@@ -156,5 +155,10 @@ pub fn parse_input(
         .expect(&support_err);
 
     println!("Input stream created");
-    Ok((opt, stream))
+    Ok(stream)
+}
+
+#[allow(unused)]
+pub fn parse_input() -> Opt {
+    Opt::parse()
 }

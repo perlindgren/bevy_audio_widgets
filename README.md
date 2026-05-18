@@ -29,19 +29,33 @@ The figure above illustrates the capture and view.
 
 As an example we develop a (guitar) tuner application.
 
-It is based on an oscilloscope view of the signal, where an in tune signal is steady while an out of tune signal wanders either to the right or to the left. As we will later see, this approach is superior to traditional digital tuners as it provides immediate (zero latency) feedback, with precision beyond the resonance stability of any stringed instrument. Furthermore it allows for tuning against both open and (pinch) harmonics any loss of precision. In fact the taken approach reveals shortcomings of string material, saddles, tuners, and effects of magnetic pull induced by the microphones. Thus besides of tuning, it provides a tool for precise adjustments of intonation and microphone height.
+It is based on an oscilloscope view of the signal, where an in tune signal is steady while an out of tune signal wanders either to the right or to the left. As we will later see, this approach is superior to traditional digital tuners as it provides immediate (zero latency) feedback, with precision beyond the resonance stability of any stringed instrument. Furthermore it allows for tuning against both open strings, fretted notes and (pinch) harmonics without any loss of precision. In fact the taken approach reveals shortcomings of string material, saddles, tuners, and effects of magnetic pull induced by the microphones. Thus besides of tuning, it provides a tool for precise adjustments of intonation, microphone height and other parameters of the stringed instrument.
 
 #### Implementation details
 
 Assuming we want to tune for the E2 (the lowest string of a 6-stringed guitar in standard tuning). The frequency of E2 is 82.41Hz with a corresponding period of 1/82.41. Assuming a sample rate of 48000 Hz, the frame length is 582.45358573 (notice we do not round at this point, which will be of importance later).
 
-The wave buffer is spitted akin to a single producer multiple (SPMC) consumer pattern. The consumer provides dual iterators ($i1$, $i2$) over a $period$, where $i1$ and and $i2$ where $i1$ provides the samples from frame $offset$ to start of frame (most recent first), and $i2$ provides the remaining (older) samples of the previous frame (wrapping around if needed). Assume $n$ to be the last sample written by the producer, then:
+The wave buffer (backing store) is handled akin to a single producer multiple (SPMC) consumer pattern. The consumer provides dual iterators ($i1$, $i2$) over a $period$, where $i1$ and and $i2$ where $i1$ provides the samples from frame $offset$ to start of frame (most recent first), and $i2$ provides the remaining (older) samples of the previous frame.
+
+Assume $n$ to be the (monotonic growing) index of the last sample written by the producer, then:
 
 $$offset = n\%frame$$
 
-This calculation is performed on the floating point representation of the frame length to increase the precision. The view composes the iterator outputs where the last (oldest) sample of $i2$ is followed by the first (most recent sample of $i2$), allowing a continuos line to be formed from the sample points.
+This calculation is performed on the floating point representation of the frame length to increase the precision. The view composes the iterator outputs where the last (oldest) sample of $i2$ is followed by the first (most recent sample of $i1$), allowing a continuos line to be formed from the sample points.
 
 For the implementation, we adopt the Rust iterator pattern in a zero copy fashion.
+
+Figures below depict edge cases:
+
+- a), in this case $n$ is at the last index of the buffer. The $offset$ is calculated from the last frame.
+
+- b), in this case $n$ has surpassed the length of the frame. The $offset$ is (still) calculated from the last frame. Notice however, that the generated iterators refer to indices modulus the buffer length (thus all reads are ensured to be within bounds of the shared backing store).
+
+![wavebuf](./figs/wavebuf2.drawio.svg)
+
+As an aside, we observe that the waveform is discontinuous  across $n$, where new samples overwrite old (this, even in case that the input samples are continuous). The $view$ however, always present a phase aligned representation in case the frame length matches a period (or harmonic) of the input signal.
+
+The monotonically increasing counter $n$ is stored as a `usize`. With a sample rate of 48kHz, we will run into an overflow after $(2^64-1)/48000/60/60/24/356=12186300$ years, thus an Ariane 5 flight 501 failure is unlikely.
 
 ## License
 
