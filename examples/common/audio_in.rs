@@ -14,10 +14,9 @@ pub struct Opt {
     #[arg(short, long)]
     pub device: Option<String>,
 
-    /// How long to record, in seconds
-    #[arg(long, default_value_t = 1)]
-    pub duration: u64,
-
+    // /// How long to record, in seconds
+    // #[arg(long, default_value_t = 1)]
+    // pub duration: u64,
     /// Channels
     #[arg(long, default_value_t = 1)]
     pub channels: u16,
@@ -29,6 +28,10 @@ pub struct Opt {
     /// Buffer size in frames
     #[arg(long, default_value_t = 1024)]
     pub buffer_size: u32,
+
+    /// Test with a sine wave instead of actual audio input.
+    #[arg(long)]
+    pub sine_wave_freq: Option<f32>,
 
     /// Use the JACK host
     #[cfg(any(
@@ -126,16 +129,30 @@ pub fn parse_input(
         supported_txt, config
     );
 
+    let callback: Box<dyn FnMut(&[f32], &cpal::InputCallbackInfo) + Send + '_> =
+        if let Some(freq) = opt.sine_wave_freq {
+            println!("Generating sine wave with frequency {} Hz", freq);
+            let sample_rate = config.sample_rate as usize;
+            let mut sample_clock: u64 = 0; // should never wrap 
+            let mut buf = vec![0.0; opt.buffer_size as usize * config.channels as usize];
+
+            Box::new(move |_data: &[f32], _| {
+                for (i, sample) in _data.iter().enumerate() {
+                    buf[i] = (sample_clock as f32 * 2.0 * std::f32::consts::PI * freq
+                        / sample_rate as f32)
+                        .sin();
+                    sample_clock = (sample_clock + 1);
+                }
+                write_input_data(&buf);
+            })
+        } else {
+            Box::new(move |data: &[f32], _| {
+                write_input_data(data);
+            })
+        };
+
     let stream = device
-        .build_input_stream(
-            &config,
-            move |data: &[f32], info| {
-                // println!("info: {:?}", info);
-                write_input_data(data)
-            },
-            err_fn,
-            None,
-        )
+        .build_input_stream(&config, callback, err_fn, None)
         .expect(&support_err);
 
     println!("Input stream created");

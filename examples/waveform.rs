@@ -11,7 +11,6 @@ use common::audio_in::parse_input;
 use std::sync::{Arc, Mutex};
 
 struct WaveBuffer {
-    len: usize,
     samples: Vec<f32>,
     index: usize,
 }
@@ -19,7 +18,6 @@ struct WaveBuffer {
 impl WaveBuffer {
     fn new(len: usize) -> Self {
         Self {
-            len,
             samples: vec![0.0; len],
             index: 0,
         }
@@ -132,43 +130,50 @@ fn setup(mut commands: Commands) {
 fn draw_waveform(mut gizmos: Gizmos, wave_buffer: Res<WaveForm>) {
     let wave_buffer = &*wave_buffer.0.lock().unwrap();
 
-    // gizmos.linestrip_2d(
-    //     (0..wave_buffer.len).map(|n| {
-    //         let t = n as f32 / wave_buffer.samples.len() as f32;
-    //         let x = (t - 0.5) * 600.0;
-    //         let y = wave_buffer.samples[n] * 400.0;
-    //         Vec2::new(x, y)
-    //     }),
-    //     WHITE,
-    // );
-
     let len = wave_buffer.samples.len();
+    gizmos.linestrip_2d(
+        (0..len).map(|n| {
+            let t = n as f32 / wave_buffer.samples.len() as f32;
+            let x = (t - 0.5) * 600.0;
+            let y = wave_buffer.samples[n] * 50.0;
+            Vec2::new(x, y - 500.0)
+        }),
+        WHITE,
+    );
 
-    let freq = 110.0; // A2
-
+    let freq = 82.41; // E2
     let it = wave_buffer
         .to_iterator(freq)
         .enumerate()
         .map(|(n, sample)| {
             let t = n as f32 / (len as f32 / freq);
             let x = (t - 0.5) * 600.0;
-            let y = sample * 400.0;
+            let y = sample * 100.0 - 200.0;
             Vec2::new(x, y)
         });
-
     gizmos.linestrip_2d(it, GREEN);
 
-    let freq = 146.83; // E2
-
+    let freq = 110.0; // A3
     let it = wave_buffer
         .to_iterator(freq)
         .enumerate()
         .map(|(n, sample)| {
             let t = n as f32 / (len as f32 / freq);
             let x = (t - 0.5) * 600.0;
-            let y = sample * 400.0 + 200.0;
+            let y = sample * 100.0;
             Vec2::new(x, y)
         });
+    gizmos.linestrip_2d(it, GREEN);
 
+    let freq = 146.83; // D3
+    let it = wave_buffer
+        .to_iterator(freq)
+        .enumerate()
+        .map(|(n, sample)| {
+            let t = n as f32 / (len as f32 / freq);
+            let x = (t - 0.5) * 600.0;
+            let y = sample * 100.0 + 200.0;
+            Vec2::new(x, y)
+        });
     gizmos.linestrip_2d(it, LIGHT_YELLOW);
 }
