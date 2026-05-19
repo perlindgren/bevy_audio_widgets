@@ -1,13 +1,12 @@
 use bevy::{
     color::palettes::css::*,
     dev_tools::fps_overlay::{FpsOverlayConfig, FpsOverlayPlugin},
-    // math::Isometry2d,
     prelude::*,
 };
 use cpal::traits::StreamTrait;
-// use std::f32::consts::{FRAC_PI_2, PI, TAU};
+
 mod common;
-use common::audio_in::parse_input;
+use common::audio_in::{open_input_stream, parse_input};
 use std::sync::{Arc, Mutex};
 
 use bevy_audio_widgets::wave_buffer::*;
@@ -18,6 +17,8 @@ struct WaveForm(Arc<Mutex<WaveBuffer>>);
 const SAMPLE_SIZE: usize = 48000;
 
 fn main() -> Result<(), anyhow::Error> {
+    env_logger::init();
+
     let opt = parse_input();
     let buf_size = SAMPLE_SIZE;
 
@@ -37,7 +38,7 @@ fn main() -> Result<(), anyhow::Error> {
         }
     };
 
-    let stream = common::audio_in::open_input_stream(&opt, write_input_data)?;
+    let stream = open_input_stream(&opt, write_input_data)?;
 
     println!(
         "Starting audio input stream... sample rate: {}, channels: {}",
@@ -78,7 +79,7 @@ fn draw_waveform(mut gizmos: Gizmos, wave_buffer: Res<WaveForm>) {
     //     WHITE,
     // );
 
-    let freq = 82.41; // E2
+    let freq = 82.41 / 4.0; // E2
     let it = wave_buffer
         .to_iterator(freq)
         .enumerate()

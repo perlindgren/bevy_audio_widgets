@@ -1,3 +1,4 @@
+use log::{Level, debug, log_enabled, trace};
 pub struct WaveBuffer {
     pub rate: f32,         // sample rate
     pub samples: Vec<f32>, // buffer size
@@ -16,47 +17,50 @@ impl WaveBuffer {
     #[inline(always)]
     // Wraps around when the buffer is full.
     pub fn add_samples(&mut self, input: &[f32]) {
-        let mut index = self.index % self.samples.len(); // essentially 
+        // index is used for the raw buffer accesses, so modulo self.samples.len().
+        let mut index = self.index % self.samples.len();
+
         for &sample in input.iter() {
-            // if self.index == 0 {
-            //     println!(".");
-            // }
             self.samples[index] = sample;
             index = (index + 1) % self.samples.len();
 
-            if self.index == 0 {
-                println!("Buffer full, wrapping around...");
+            if log_enabled!(Level::Trace) {
+                if index == 0 {
+                    trace!("Input buffer wrapping around...");
+                }
+                trace!("sample: {:.2} at index {}", sample, index);
             }
-
-            //  println!("sample: {:.2} at index {}", sample, self.index);
         }
         self.index += input.len();
     }
 
-    //
+    // Returns an iterator over the n most recent samples in the buffer, phase aligned to the requested frequency
     pub fn to_iterator(&self, freq: f32) -> impl Iterator<Item = f32> + '_ {
         let frame_size = self.rate / freq;
         let index = self.index;
         let offset = (self.index as f32 % frame_size) as usize;
-        println!(
-            "self.index {}, index: {}, frame_size: {}",
-            self.index, index, frame_size
-        );
+        if log_enabled!(Level::Debug) {
+            debug!(
+                "Creating iterator with frame size {}, index {}, offset {}",
+                frame_size, index, offset
+            );
+        }
 
+        // iterator i1, containing the most recent samples
         let i1 = WaveBufferIter {
             buffer: self,
             index,
             nr_items: offset,
         };
 
-        // i1
-
+        // iterator i2, containing the older samples from previous frame
         let i2 = WaveBufferIter {
             buffer: self,
-            index: (self.samples.len() + self.index - offset) % self.samples.len(), // start at the beginning of the frame
+            index: self.samples.len() + self.index - offset,
             nr_items: frame_size as usize - offset,
         };
 
+        // returned iterator is one frame of audio data
         i2.chain(i1)
     }
 }
@@ -75,7 +79,9 @@ impl std::iter::Iterator for WaveBufferIter<'_> {
             return None;
         }
         let len = self.buffer.samples.len();
-        self.index = (len + self.index - 1) % len; // index points no next, so decrement first 
+        // index points no next, so decrement first
+        // wrapping is handled by modulo
+        self.index = (len + self.index - 1) % len;
         let sample = self.buffer.samples[self.index];
         self.nr_items -= 1;
         Some(sample)
