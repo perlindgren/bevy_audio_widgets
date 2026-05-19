@@ -9,8 +9,11 @@ use cpal::traits::StreamTrait;
 
 use common::audio_in::parse_input;
 
+use crate::common::audio_in::open_input_stream;
+
 fn main() -> Result<(), anyhow::Error> {
-    let (opt, stream) = parse_input(write_input_data)?;
+    let opt = parse_input();
+    let stream = open_input_stream(&opt, write_input_data)?;
 
     stream.play()?;
 

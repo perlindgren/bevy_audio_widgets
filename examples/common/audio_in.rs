@@ -14,9 +14,10 @@ pub struct Opt {
     #[arg(short, long)]
     pub device: Option<String>,
 
-    // /// How long to record, in seconds
-    // #[arg(long, default_value_t = 1)]
-    // pub duration: u64,
+    /// How long to record, in seconds
+    #[arg(long, default_value_t = 1)]
+    pub duration: u64,
+
     /// Channels
     #[arg(long, default_value_t = 1)]
     pub channels: u16,
