@@ -121,7 +121,7 @@ fn draw_waveform(mut gizmos: Gizmos, wave_buffer: Res<WaveForm>) {
         .map(|(n, sample)| {
             let t = n as f32 / (len as f32 / freq);
             let x = (t - 0.5) * 600.0;
-            let y = sample * 100.0 + 200.0;
+            let y = sample * 100.0 + 400.0;
             Vec2::new(x, y)
         });
     gizmos.linestrip_2d(it, LIGHT_BLUE);
