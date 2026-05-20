@@ -69,62 +69,74 @@ fn setup(mut commands: Commands) {
 fn draw_waveform(mut gizmos: Gizmos, wave_buffer: Res<WaveForm>) {
     let wave_buffer = &*wave_buffer.0.lock().unwrap();
 
-    let len = wave_buffer.samples.len();
-    // gizmos.linestrip_2d(
-    //     (0..len).map(|n| {
-    //         let t = n as f32 / wave_buffer.samples.len() as f32;
+    let mut draw = |freq: f32, y: f32, color: Color| {
+        let (frame_size, frame_it) = wave_buffer.to_iterator(4.0, freq);
+        let it = frame_it.enumerate().map(|(n, sample)| {
+            let t = n as f32 / frame_size;
+            let x = (t - 0.5) * 600.0;
+            let y = sample * 1000.0;
+            Vec2::new(x, y)
+        });
+        gizmos.linestrip_2d(it, color);
+    };
+    // let len = wave_buffer.samples.len();
+    // // gizmos.linestrip_2d(
+    // //     (0..len).map(|n| {
+    // //         let t = n as f32 / wave_buffer.samples.len() as f32;
+    // //         let x = (t - 0.5) * 600.0;
+    // //         let y = wave_buffer.samples[n] * 50.0;
+    // //         Vec2::new(x, y - 500.0)
+    // //     }),
+    // //     WHITE,
+    // // );
+
+    draw(82.41, -200.0, GREEN.into()); // E2
+
+    // let freq = 82.41 / 4.0; // E2
+    // let it = wave_buffer
+    //     .to_iterator(freq)
+    //     .enumerate()
+    //     .map(|(n, sample)| {
+    //         let t = n as f32 / (len as f32 / freq);
     //         let x = (t - 0.5) * 600.0;
-    //         let y = wave_buffer.samples[n] * 50.0;
-    //         Vec2::new(x, y - 500.0)
-    //     }),
-    //     WHITE,
-    // );
+    //         let y = sample * 100.0 - 200.0;
+    //         Vec2::new(x, y)
+    //     });
+    // gizmos.linestrip_2d(it, GREEN);
 
-    let freq = 82.41 / 4.0; // E2
-    let it = wave_buffer
-        .to_iterator(freq)
-        .enumerate()
-        .map(|(n, sample)| {
-            let t = n as f32 / (len as f32 / freq);
-            let x = (t - 0.5) * 600.0;
-            let y = sample * 100.0 - 200.0;
-            Vec2::new(x, y)
-        });
-    gizmos.linestrip_2d(it, GREEN);
+    // let freq = 110.0; // A3
+    // let it = wave_buffer
+    //     .to_iterator(freq)
+    //     .enumerate()
+    //     .map(|(n, sample)| {
+    //         let t = n as f32 / (len as f32 / freq);
+    //         let x = (t - 0.5) * 600.0;
+    //         let y = sample * 100.0;
+    //         Vec2::new(x, y)
+    //     });
+    // gizmos.linestrip_2d(it, GREEN);
 
-    let freq = 110.0; // A3
-    let it = wave_buffer
-        .to_iterator(freq)
-        .enumerate()
-        .map(|(n, sample)| {
-            let t = n as f32 / (len as f32 / freq);
-            let x = (t - 0.5) * 600.0;
-            let y = sample * 100.0;
-            Vec2::new(x, y)
-        });
-    gizmos.linestrip_2d(it, GREEN);
+    // let freq = 146.83; // D3
+    // let it = wave_buffer
+    //     .to_iterator(freq)
+    //     .enumerate()
+    //     .map(|(n, sample)| {
+    //         let t = n as f32 / (len as f32 / freq);
+    //         let x = (t - 0.5) * 600.0;
+    //         let y = sample * 100.0 + 200.0;
+    //         Vec2::new(x, y)
+    //     });
+    // gizmos.linestrip_2d(it, LIGHT_YELLOW);
 
-    let freq = 146.83; // D3
-    let it = wave_buffer
-        .to_iterator(freq)
-        .enumerate()
-        .map(|(n, sample)| {
-            let t = n as f32 / (len as f32 / freq);
-            let x = (t - 0.5) * 600.0;
-            let y = sample * 100.0 + 200.0;
-            Vec2::new(x, y)
-        });
-    gizmos.linestrip_2d(it, LIGHT_YELLOW);
-
-    let freq = 196.0; // G3
-    let it = wave_buffer
-        .to_iterator(freq)
-        .enumerate()
-        .map(|(n, sample)| {
-            let t = n as f32 / (len as f32 / freq);
-            let x = (t - 0.5) * 600.0;
-            let y = sample * 100.0 + 400.0;
-            Vec2::new(x, y)
-        });
-    gizmos.linestrip_2d(it, LIGHT_BLUE);
+    // let freq = 196.0; // G3
+    // let it = wave_buffer
+    //     .to_iterator(freq)
+    //     .enumerate()
+    //     .map(|(n, sample)| {
+    //         let t = n as f32 / (len as f32 / freq);
+    //         let x = (t - 0.5) * 600.0;
+    //         let y = sample * 100.0 + 400.0;
+    //         Vec2::new(x, y)
+    //     });
+    // gizmos.linestrip_2d(it, LIGHT_BLUE);
 }

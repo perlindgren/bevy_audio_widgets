@@ -35,8 +35,8 @@ impl WaveBuffer {
     }
 
     // Returns an iterator over the n most recent samples in the buffer, phase aligned to the requested frequency
-    pub fn to_iterator(&self, freq: f32) -> impl Iterator<Item = f32> + '_ {
-        let frame_size = self.rate / freq;
+    pub fn to_iterator(&self, periods: f32, freq: f32) -> (f32, impl Iterator<Item = f32> + '_) {
+        let frame_size = periods * self.rate / freq;
         let index = self.index;
         let offset = (self.index as f32 % frame_size) as usize;
         if log_enabled!(Level::Debug) {
@@ -61,7 +61,7 @@ impl WaveBuffer {
         };
 
         // returned iterator is one frame of audio data
-        i2.chain(i1)
+        (frame_size, i2.chain(i1))
     }
 }
 
@@ -101,10 +101,8 @@ mod tests {
         println!("Buffer index: {:?}", buffer.index);
         assert!(buffer.index == 25);
 
-        let iter = buffer.to_iterator(1.0);
-        for s in iter {
-            println!("Sample: {}", s);
-        }
+        let (_frame_size, iter) = buffer.to_iterator(1.0, 1.0);
+        iter.for_each(|s| println!("Sample: {}", s));
 
         println!("---");
         for i in 25..30 {
@@ -112,19 +110,15 @@ mod tests {
         }
         assert!(buffer.index == 30);
 
-        let iter = buffer.to_iterator(1.0);
-        for s in iter {
-            println!("Sample: {}", s);
-        }
+        let (_frame_size, iter) = buffer.to_iterator(1.0, 1.0);
+        iter.for_each(|s| println!("Sample: {}", s));
 
         println!("---");
         for i in 30..35 {
             buffer.add_samples(&[i as f32]);
         }
         assert!(buffer.index == 35);
-        let iter = buffer.to_iterator(1.0);
-        for s in iter {
-            println!("Sample: {}", s);
-        }
+        let (_frame_size, iter) = buffer.to_iterator(1.0, 1.0);
+        iter.for_each(|s| println!("Sample: {}", s));
     }
 }
