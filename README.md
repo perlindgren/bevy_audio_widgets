@@ -2,9 +2,13 @@
 
 The intention is to provide a set of re-usable widgets for audio visualizations including:
 
-- Wave form views.
-- Frequency spectrum analysis.
-- Spectrogram.
+- Waveform views.
+- Frequency spectrum analysis, e.g., spectrogram.
+- Peak and RMS metering.
+
+Example applications.
+
+- Tuner for stringed instruments.
 
 ## Dependencies
 
@@ -53,9 +57,56 @@ Figures below depict edge cases:
 
 ![wavebuf](./figs/wavebuf2.drawio.svg)
 
-As an aside, we observe that the waveform is discontinuous  across $n$, where new samples overwrite old (this, even in case that the input samples are continuous). The $view$ however, always present a phase aligned representation in case the frame length matches a period (or harmonic) of the input signal.
+As an aside, we observe that the waveform is discontinuous across $n$, where new samples overwrite old (this, even in case that the input samples forms a continuous waveform). The $view$ however, always present a phase aligned representation in case the frame length matches a period (or harmonic) of the input signal.
 
 The monotonically increasing counter $n$ is stored as a `usize`. With a sample rate of 48kHz, we will run into an overflow after $(2^64-1)/48000/60/60/24/356=12186300$ years, thus an Ariane 5 flight 501 failure is unlikely.
+
+### Performance and further improvements
+
+Running the tuner application with 6 matching frames concurrently (including rendering) seems to consume less than one percent of available CPU resources on tested arch Linux x86. On tested MacOS M4 (aarch64) Activity monitor reports 50% of a single core. Thus performance is sufficiently good for practical use (even in debug build).
+
+However, the current implementation can be improved, e.g., by:
+
+- Removing the mutex lock requirement, by storing data as atomic (`f32`), thus overwrites can be safely implemented. If desired atomic `usize` can hold the write index and read index/indexes cross the current write index can be checked indicating buffer overruns.
+
+- Since all accesses to underlying storage are done through vector indexes under modulus arithmetics, no range checking is needed. This can be achieved through _unsafe_ `get_mut` and `get` operations for the producer/consumer(s) respectively.
+
+Why not instead you const generics arrays. Well, this is a design decision based on flexibility, we do not want to require the buffer size to be determined at compile time, thus a no go for const generics in this case.
+
+---
+
+## Running
+
+To run the tuner application on a simulated sine wave:
+
+```shell
+RUST_LOG=bevy=info,tuner=error cargo run --example tuner -- --sine-wave-freq 110.0 --buffer-size 256
+```
+
+Under a jack enabled Linux environment, the `--jack` option should be added for low latency audio capture.
+
+Logging is supported by the `log` shim. For the examples `env_logger` is used, as in the example above (allowing different logging details per crate, application, module etc.)
+
+Bevy by itself implements a logging framework by default. Bevy will report an error as the tuner example has already created a logging backend (in order to provide logging before Bevy is instantiated/called). This error can be safely ignored. If for some reason you do not want Bevy logging at all, the `LogPlugin` can be disabled (with the effect that no error will be reported by Bevy).
+
+### Bugs
+
+It seems that when running the tuner on a generated sine wave, over time (several minutes) the waveform view suffers noise. It is unclear if the noise stems from the generated sine wave, or if it stems from the buffer handling. The problem is under investigation.
+
+### TODOS
+
+The crate (library and examples) are under early development. Some planned features include:
+
+- ASIO support for Windows
+
+- More widgets and examples
+  - Peak and RMS metering
+  - Auto gain (compressor like effect) for improving visual feedback
+  - Spectrum visualizations (instance, and over time)
+
+## Contributions Welcome
+
+Contributions are welcome. Feel free to raise issues, and/or submit PRs according to the below License. Vibe coded contributions will be discarded, while the use of AI assisted tooling is allowed unless breaking with below License.
 
 ## License
 

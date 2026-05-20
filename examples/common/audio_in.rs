@@ -6,6 +6,7 @@ use cpal::StreamConfig;
 use cpal::traits::{DeviceTrait, HostTrait /* StreamTrait */};
 // use cpal::{FromSample, Sample};
 // use std::sync::{Arc, Mutex};
+use log::info;
 
 #[derive(Parser, Debug)]
 #[command(version, about = "CPAL record_wav example", long_about = None)]
@@ -89,7 +90,7 @@ pub fn open_input_stream(
     }
     .expect("failed to find input device");
 
-    println!("Input device: {}", device.id()?);
+    info!("Input device: {}", device.id()?);
 
     let supported_configs = device.supported_input_configs()?;
 
@@ -103,10 +104,10 @@ pub fn open_input_stream(
         buffer_size: cpal::BufferSize::Fixed(opt.buffer_size),
     };
 
-    println!("Input device config: {:?}", config);
+    info!("Input device config: {:?}", config);
 
     let err_fn = move |err| {
-        eprintln!("an error occurred on stream: {err}");
+        log::error!("an error occurred on stream: {err}");
     };
 
     let supported_txt = supported_configs
@@ -155,7 +156,7 @@ pub fn open_input_stream(
         .build_input_stream(&config, callback, err_fn, None)
         .expect(&support_err);
 
-    println!("Input stream created");
+    info!("Input stream created");
     Ok(stream)
 }
 

@@ -32,7 +32,7 @@ fn main() -> Result<(), anyhow::Error> {
     // Callback closure for audio input stream. It will be called whenever new audio data is available.
     let write_input_data = {
         move |input: &[f32]| {
-            // println!("Received input data: {:?}", input.len());
+            trace!("Received input data: {:?}", input.len());
             let mut wb = wave_buffer_clone.lock().unwrap();
             wb.add_samples(input);
         }
@@ -50,6 +50,7 @@ fn main() -> Result<(), anyhow::Error> {
     App::new()
         .add_plugins((
             DefaultPlugins,
+            // DefaultPlugins.build().disable::<bevy::log::LogPlugin>(),
             FpsOverlayPlugin {
                 config: FpsOverlayConfig::default(),
             },
