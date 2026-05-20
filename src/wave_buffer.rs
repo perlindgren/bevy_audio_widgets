@@ -1,16 +1,39 @@
 use log::{Level, debug, log_enabled, trace};
+
+pub struct FrameBuffer {
+    pub tuning_frequency: f32,
+    pub nr_periods: f32,
+    pub buffer: Vec<f32>,
+}
+
+impl FrameBuffer {
+    pub fn new(sample_freq: f32, nr_periods: f32, tuning_frequency: f32) -> Self {
+        let frame_size = sample_freq / tuning_frequency;
+        Self {
+            tuning_frequency,
+            nr_periods,
+            buffer: vec![0.0; frame_size.round() as usize],
+        }
+    }
+}
 pub struct WaveBuffer {
-    pub rate: f32,         // sample rate
-    pub samples: Vec<f32>, // buffer size
-    pub index: usize,      // next index to write in buffer
+    pub rate: f32,                       // sample rate
+    pub samples: Vec<f32>,               // buffer size
+    pub index: usize,                    // next index to write in buffer
+    pub frame_buffers: Vec<FrameBuffer>, // buffers for each frequency to avoid allocations
 }
 
 impl WaveBuffer {
-    pub fn new(rate: f32, len: usize) -> Self {
+    pub fn new(rate: f32, len: usize, periods: f32, freqs: &[f32]) -> Self {
+        let frame_buffers = freqs
+            .iter()
+            .map(|&tuning_frequency| FrameBuffer::new(rate, periods, tuning_frequency))
+            .collect();
         Self {
             rate,
             samples: vec![0.0; len],
             index: 0, // we start at index 0.
+            frame_buffers,
         }
     }
 
@@ -38,7 +61,7 @@ impl WaveBuffer {
     pub fn to_iterator(&self, periods: f32, freq: f32) -> (f32, impl Iterator<Item = f32> + '_) {
         let frame_size = periods * self.rate / freq;
         let index = self.index;
-        let offset = (self.index as f32 % frame_size) as usize;
+        let offset = (self.index as f32 % frame_size).round() as usize;
         if log_enabled!(Level::Debug) {
             debug!(
                 "Creating iterator with frame size {}, index {}, offset {}",
@@ -57,7 +80,7 @@ impl WaveBuffer {
         let i2 = WaveBufferIter {
             buffer: self,
             index: self.samples.len() + self.index - offset,
-            nr_items: frame_size as usize - offset,
+            nr_items: frame_size.round() as usize - offset,
         };
 
         // returned iterator is one frame of audio data
@@ -94,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_wave_buffer() {
-        let mut buffer = WaveBuffer::new(15.0, 20);
+        let mut buffer = WaveBuffer::new(15.0, 20, 4.0, &[1.0]);
         for i in 0..25 {
             buffer.add_samples(&[i as f32]);
         }

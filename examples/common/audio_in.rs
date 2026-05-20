@@ -31,6 +31,10 @@ pub struct Opt {
     #[arg(long, default_value_t = 1024)]
     pub buffer_size: u32,
 
+    /// Number periods of audio to include in the iterator returned by `to_iterator`
+    #[arg(long, default_value_t = 4.0)]
+    pub nr_periods: f32,
+
     /// Test with a sine wave instead of actual audio input.
     #[arg(long)]
     pub sine_wave_freq: Option<f32>,

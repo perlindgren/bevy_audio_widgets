@@ -22,9 +22,14 @@ fn main() -> Result<(), anyhow::Error> {
     let opt = parse_input();
     let buf_size = SAMPLE_SIZE;
 
+    // E2, A3, D3, G3, B3, E4, the standard tuning frequencies for a guitar
+    let tuning_frequencies = [82.41, 110.0, 146.83, 196.0, 246.94, 329.63];
+
     let wave_buffer = Arc::new(Mutex::new(WaveBuffer::new(
         opt.sample_rate as f32,
         buf_size,
+        opt.nr_periods,
+        &tuning_frequencies,
     )));
 
     let wave_buffer_clone = wave_buffer.clone();
@@ -74,21 +79,23 @@ fn draw_waveform(mut gizmos: Gizmos, wave_buffer: Res<WaveForm>) {
         let it = frame_it.enumerate().map(|(n, sample)| {
             let t = n as f32 / frame_size;
             let x = (t - 0.5) * 600.0;
-            let y = sample * 1000.0;
+            let y = sample * 1000.0 + y;
             Vec2::new(x, y)
         });
         gizmos.linestrip_2d(it, color);
     };
-    // let len = wave_buffer.samples.len();
-    // // gizmos.linestrip_2d(
-    // //     (0..len).map(|n| {
-    // //         let t = n as f32 / wave_buffer.samples.len() as f32;
-    // //         let x = (t - 0.5) * 600.0;
-    // //         let y = wave_buffer.samples[n] * 50.0;
-    // //         Vec2::new(x, y - 500.0)
-    // //     }),
-    // //     WHITE,
-    // // );
+
+    // compute match
+    for tf in wave_buffer.frame_buffers.iter() {
+        let (frame_size, it) = wave_buffer.to_iterator(1.0, tf.tuning_frequency);
+        print!(
+            "tf {}: it {}, fs {}",
+            tf.tuning_frequency,
+            it.count(),
+            frame_size
+        );
+    }
+    println!();
 
     draw(82.41, -200.0, GREEN.into()); // E2
 
